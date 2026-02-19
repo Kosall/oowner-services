@@ -1,0 +1,22 @@
+services:
+  ownerservice-postgres:
+    image: postgres:16
+    container_name: ownerservice-postgres
+    environment:
+      POSTGRES_DB: ownerservice
+      POSTGRES_USER: ownerservice
+      POSTGRES_PASSWORD: ownerservice
+      TZ: Asia/Phnom_Penh
+    ports:
+      - "5445:5432"
+    volumes:
+      - ownerservice_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ownerservice -d ownerservice"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+volumes:
+  ownerservice_pg_data:

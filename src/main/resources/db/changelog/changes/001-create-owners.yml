@@ -1,0 +1,53 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-owners
+      author: piseth
+      changes:
+        - createTable:
+            tableName: owners
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKeyName: pk_owner
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: email
+                  type: varchar(80)
+              - column:
+                  name: phone
+                  type: varchar(30)
+              - column:
+                  name: status
+                  type: varchar(30)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+
+        - createIndex:
+            tableName: owners
+            indexName: ux_owners_email
+            unique: true
+            columns:
+              - column:
+                  name: email
+
+        - createIndex:
+            tableName: owners
+            indexName: ux_owners_phone
+            unique: true
+            columns:
+              - column:
+                  name: phone				  
