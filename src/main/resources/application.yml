@@ -13,4 +13,6 @@ spring:
        username: ownerservice
        password: ownerservice
   liquibase:
-       change-log: classpath:db/changelog/db.changelog-master.yml 
+       change-log: classpath:db/changelog/db.changelog-master.yml
+server:
+  port: 8010 
