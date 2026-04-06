@@ -1,0 +1,14 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-add-owner-verification-columns
+      author: piseth
+      changes:
+        - addColumn:
+            tableName: owners
+            columns:
+              - column:
+                  name: email_verified_at
+                  type: timestamp
+              - column:
+                  name: phone_verified_at
+                  type: timestamp

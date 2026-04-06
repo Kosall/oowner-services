@@ -1,0 +1,118 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-create-owner-verifications-table
+      author: piseth
+      changes:
+        - createTable:
+            tableName: owner_verifications
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKeyName: pk_owner_verification
+                    primaryKey: true
+                    nullable: false
+
+              - column:
+                  name: owner_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: type
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: target
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: otp_hash
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: otp_salt
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: expires_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: attempt_count
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: max_attempts
+                  type: int
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: verified
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: verified_at
+                  type: timestamptz
+
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+
+        - addForeignKeyConstraint:
+            baseTableName: owner_verifications
+            baseColumnNames: owner_id
+            referencedTableName: owners
+            referencedColumnNames: id
+            constraintName: fk_owner_verifications_owner
+
+        - createIndex:
+            tableName: owner_verifications
+            indexName: idx_owner_verifications_owner_id
+            columns:
+              - column:
+                  name: owner_id
+
+        - createIndex:
+            tableName: owner_verifications
+            indexName: idx_owner_verifications_owner_type
+            columns:
+              - column:
+                  name: owner_id
+              - column:
+                  name: type
+
+        - createIndex:
+            tableName: owner_verifications
+            indexName: idx_owner_verifications_expires_at
+            columns:
+              - column:
+                  name: expires_at

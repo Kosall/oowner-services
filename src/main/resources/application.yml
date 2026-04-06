@@ -14,5 +14,11 @@ spring:
        password: ownerservice
   liquibase:
        change-log: classpath:db/changelog/db.changelog-master.yml
+app:
+  verification:
+     otp-length: 6
+     otp-ttl-seconds: 300
+     max-attempts: 5
+     otp-pepper: CHANGE-ME-IN-PROD 
 server:
   port: 8010 
