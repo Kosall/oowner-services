@@ -39,7 +39,7 @@ public class VerificationServiceImpl implements VerificationService{
     private final NotificationSender notificationSender;
     private final VerificationProperties verificationProperties;
     private final Clock clock;
-	@Override
+	/*@Override
 	public Mono<Void> sendOtp(UUID ownerId, VerificationType type) {
 		// TODO Auto-generated method stub
 		 return ownerRepository.findById(ownerId)
@@ -75,6 +75,66 @@ public class VerificationServiceImpl implements VerificationService{
 		                    .then();
 		            });
 	}
+*/
+    @Override
+    public Mono<Void> sendOtp(UUID ownerId, VerificationType type) {
+        return ownerRepository.findById(ownerId)
+            .switchIfEmpty(Mono.error(new OwnerNotFoundException(ownerId)))
+            .flatMap(owner -> {
+                String target = resolveTarget(owner, type);
+                validateAlreadyVerified(owner, type);
+
+                return verificationRepository.findLatestActiveVerification(ownerId, type)
+                    .flatMap(existingVerification ->
+                        validateResendCooldown(existingVerification).thenReturn(existingVerification)
+                    )
+                    .switchIfEmpty(Mono.empty())
+                    .then(Mono.defer(() -> createAndSendOtp(ownerId, type, target)));
+            });
+    }
+    private Mono<Void> validateResendCooldown(Verification verification) {
+        Instant now = Instant.now(clock);
+
+        Instant allowedTime = verification.getCreatedAt()
+            .plusSeconds(verificationProperties.getResendCooldownSeconds());
+
+        if (now.isBefore(allowedTime)) {
+            long remainingSeconds = allowedTime.getEpochSecond() - now.getEpochSecond();
+
+            return Mono.error(new BadRequestException(
+                "Please wait " + remainingSeconds + " seconds before requesting a new OTP."
+            ));
+        }
+
+        return Mono.empty();
+    }
+    private Mono<Void> createAndSendOtp(UUID ownerId, VerificationType type, String target) {
+        String otp = otpGenerator.generateNumericOtp(verificationProperties.getOtpLength());
+        String salt = otpSaltGenerator.generate();
+        String hash = otpHasher.hash(otp, salt, verificationProperties.getOtpPepper());
+
+        Verification verification = verificationFactory.newVerification(
+            ownerId,
+            type,
+            target,
+            hash,
+            salt
+        );
+
+        Instant now = Instant.now(clock);
+
+        return verificationRepository.findAllActiveVerifications(ownerId, type)
+            .flatMap(existing -> {
+                existing.setVerified(true);
+                existing.setVerifiedAt(now);
+                existing.setUpdatedAt(now);
+                return verificationRepository.save(existing);
+            })
+            .then(verificationRepository.save(verification))
+            .then(Mono.fromRunnable(()->notificationSender.send(target, type, otp)))
+            .doOnSuccess(i->log.info("OTP generated and sent. ownerId={}, type={}",ownerId, type))
+            .then();
+    }
 
 	@Override
 	public Mono<Void> verifyOtp(UUID ownerId, VerificationType type, String otp) {

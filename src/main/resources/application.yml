@@ -14,11 +14,26 @@ spring:
        password: ownerservice
   liquibase:
        change-log: classpath:db/changelog/db.changelog-master.yml
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: kosall123nim@gmail.com
+    password: smjl bmmd ijxp cqkj
+    properties:
+        mail:
+          smtp:
+           auth: true
+           starttls:
+            enable: true   
+
 app:
   verification:
      otp-length: 6
      otp-ttl-seconds: 300
      max-attempts: 5
      otp-pepper: CHANGE-ME-IN-PROD 
+logging:
+  level:
+    org.springframework.boot.autoconfigure.mail: DEBUG
 server:
   port: 8010 
