@@ -5,3 +5,5 @@ databaseChangeLog:
       file: db/changelog/changes/002-add-owner-verification-columns.yml
   - include:
       file: db/changelog/changes/003-create-owner-verifications-table.yml
+  - include:
+      file: db/changelog/changes/004-add-verification-status.yaml

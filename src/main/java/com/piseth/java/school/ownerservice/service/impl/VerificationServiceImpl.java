@@ -11,10 +11,12 @@ import com.piseth.java.school.ownerservice.configurations.VerificationProperties
 import com.piseth.java.school.ownerservice.domain.Owner;
 import com.piseth.java.school.ownerservice.domain.Verification;
 import com.piseth.java.school.ownerservice.enumeration.OwnerStatus;
+import com.piseth.java.school.ownerservice.enumeration.VerificationStatus;
 import com.piseth.java.school.ownerservice.enumeration.VerificationType;
 import com.piseth.java.school.ownerservice.exceptions.BadRequestException;
 import com.piseth.java.school.ownerservice.exceptions.OwnerNotFoundException;
 import com.piseth.java.school.ownerservice.factory.VerificationFactory;
+import com.piseth.java.school.ownerservice.notification.ConsoleNotificationSender;
 import com.piseth.java.school.ownerservice.notification.NotificationSender;
 import com.piseth.java.school.ownerservice.repository.OwnerRepository;
 import com.piseth.java.school.ownerservice.repository.VerificationRepository;
@@ -26,10 +28,13 @@ import com.piseth.java.school.ownerservice.verification.OtpSaltGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class VerificationServiceImpl implements VerificationService{
+
+    private final ConsoleNotificationSender consoleNotificationSender;
 	private final OwnerRepository ownerRepository;
     private final VerificationRepository verificationRepository;
     private final VerificationFactory verificationFactory;
@@ -39,6 +44,10 @@ public class VerificationServiceImpl implements VerificationService{
     private final NotificationSender notificationSender;
     private final VerificationProperties verificationProperties;
     private final Clock clock;
+
+//    VerificationServiceImpl(ConsoleNotificationSender consoleNotificationSender) {
+//        this.consoleNotificationSender = consoleNotificationSender;
+//    }
 	/*@Override
 	public Mono<Void> sendOtp(UUID ownerId, VerificationType type) {
 		// TODO Auto-generated method stub
@@ -94,7 +103,7 @@ public class VerificationServiceImpl implements VerificationService{
     }
     private Mono<Void> validateResendCooldown(Verification verification) {
         Instant now = Instant.now(clock);
-
+        
         Instant allowedTime = verification.getCreatedAt()
             .plusSeconds(verificationProperties.getResendCooldownSeconds());
 
@@ -112,6 +121,7 @@ public class VerificationServiceImpl implements VerificationService{
         String otp = otpGenerator.generateNumericOtp(verificationProperties.getOtpLength());
         String salt = otpSaltGenerator.generate();
         String hash = otpHasher.hash(otp, salt, verificationProperties.getOtpPepper());
+        log.info("this "+otp+" for using");
 
         Verification verification = verificationFactory.newVerification(
             ownerId,
@@ -125,13 +135,16 @@ public class VerificationServiceImpl implements VerificationService{
 
         return verificationRepository.findAllActiveVerifications(ownerId, type)
             .flatMap(existing -> {
-                existing.setVerified(true);
-                existing.setVerifiedAt(now);
+//                existing.setVerified(true);
+//                existing.setVerifiedAt(now);
+            	existing.setStatus(VerificationStatus.REPLACED);
                 existing.setUpdatedAt(now);
                 return verificationRepository.save(existing);
             })
+            
             .then(verificationRepository.save(verification))
             .then(Mono.fromRunnable(()->notificationSender.send(target, type, otp)))
+          
             .doOnSuccess(i->log.info("OTP generated and sent. ownerId={}, type={}",ownerId, type))
             .then();
     }
@@ -141,7 +154,9 @@ public class VerificationServiceImpl implements VerificationService{
 		 return ownerRepository.findById(ownerId)
 		            .switchIfEmpty(Mono.error(new OwnerNotFoundException(ownerId)))
 		            .flatMap(owner -> verificationRepository
-		                .findFirstByOwnerIdAndTypeAndVerifiedFalseOrderByCreatedAtDesc(ownerId, type)
+		            	.findFirstByOwnerIdAndTypeAndStatusOrderByCreatedAtDesc(
+		            			ownerId, type, VerificationStatus.ACTIVE)
+//		                .findFirstByOwnerIdAndTypeAndVerifiedFalseOrderByCreatedAtDesc(ownerId, type)
 		                .switchIfEmpty(Mono.error(new BadRequestException("Verification code not found. Please request a new OTP.")))
 		                .flatMap(verification -> validateAndConsumeOtp(owner, verification, otp, type)));
 		    }
@@ -154,12 +169,16 @@ public class VerificationServiceImpl implements VerificationService{
 	    ) {
 	        Instant now = Instant.now(clock);
 
-	        if (verification.isVerified()) {
-	            return Mono.error(new BadRequestException("OTP has already been used."));
-	        }
-
-	        if (verification.getExpiresAt().isBefore(now)) {
-	            return Mono.error(new BadRequestException("OTP has expired."));
+//	        if (verification.isVerified()) {
+//	            return Mono.error(new BadRequestException("OTP has already been used."));
+//	        }
+//
+//	        if (verification.getExpiresAt().isBefore(now)) {
+//	            return Mono.error(new BadRequestException("OTP has expired."));
+//	        }
+	        if(verification.getExpiresAt().isBefore(now)) {
+	        	verification.setStatus(VerificationStatus.EXPIRED);
+	        	verification.setUpdatedAt(now);
 	        }
 
 	        if (verification.getAttemptCount() >= verification.getMaxAttempts()) {
@@ -171,6 +190,7 @@ public class VerificationServiceImpl implements VerificationService{
 	            verification.getOtpSalt(),
 	            verificationProperties.getOtpPepper(),
 	            verification.getOtpHash()
+	            
 	        );
 
 	        if (!matches) {
@@ -181,7 +201,8 @@ public class VerificationServiceImpl implements VerificationService{
 	                .then(Mono.error(new BadRequestException("Invalid OTP.")));
 	        }
 
-	        verification.setVerified(true);
+//	        verification.setVerified(true);
+	        verification.setStatus(VerificationStatus.VERIFIED);
 	        verification.setVerifiedAt(now);
 	        verification.setUpdatedAt(now);
 

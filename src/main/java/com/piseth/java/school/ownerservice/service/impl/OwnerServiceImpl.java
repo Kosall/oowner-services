@@ -6,6 +6,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import com.piseth.java.school.ownerservice.domain.Owner;
+import com.piseth.java.school.ownerservice.dto.OwnerEmailRegisterRequest;
+import com.piseth.java.school.ownerservice.dto.OwnerPhoneRegisterRequest;
 import com.piseth.java.school.ownerservice.dto.OwnerRegisterRequest;
 import com.piseth.java.school.ownerservice.dto.OwnerResponse;
 import com.piseth.java.school.ownerservice.enumeration.VerificationType;
@@ -69,5 +71,53 @@ public class OwnerServiceImpl implements OwnerService {
 
         return emailOtpMono.then(phoneOtpMono);
     }
+
+	@Override
+	public Mono<OwnerResponse> registerByEmail(OwnerEmailRegisterRequest emailRegisterRequest) {
+		log.info("Owner email registration requested");
+
+        OwnerRegisterRequest normalized = new OwnerRegisterRequest();
+        normalized.setEmail(normalizer.normalizeEmail(emailRegisterRequest.getEmail()));
+        normalized.setPhone(null);
+
+        Owner draft = ownerMapper.toOwnerDraft(normalized);
+        Owner pending = ownerFactory.newPendingOwner(draft);
+
+        return registrationValidator.validate(normalized)
+            .then(Mono.defer(() -> ownerRepository.save(pending)))
+            .flatMap(savedOwner -> verificationService
+                .sendOtp(savedOwner.getId(), VerificationType.EMAIL)
+                .thenReturn(savedOwner)
+            )
+            .doOnSuccess(savedOwner -> log.info(
+                "Owner registered by email successfully. ownerId={}",
+                savedOwner.getId()
+            ))
+            .map(ownerMapper::toResponse);
+	}
+
+	@Override
+	public Mono<OwnerResponse> registerByPhone(OwnerPhoneRegisterRequest ownerPhoneRegisterRequest) {
+		 log.info("Owner phone registration requested");
+
+	        OwnerRegisterRequest normalized = new OwnerRegisterRequest();
+	        normalized.setEmail(null);
+	        normalized.setPhone(normalizer.normalizePhone(ownerPhoneRegisterRequest.getPhone()));
+
+	        Owner draft = ownerMapper.toOwnerDraft(normalized);
+	        Owner pending = ownerFactory.newPendingOwner(draft);
+
+	        return registrationValidator.validate(normalized)
+	            .then(Mono.defer(() -> ownerRepository.save(pending)))
+	            .flatMap(savedOwner -> verificationService
+	                .sendOtp(savedOwner.getId(), VerificationType.PHONE)
+	                .thenReturn(savedOwner)
+	            )
+	            .doOnSuccess(savedOwner -> log.info(
+	                "Owner registered by phone successfully. ownerId={}",
+	                savedOwner.getId()
+	            ))
+	            .map(ownerMapper::toResponse);
+	}
 
 }

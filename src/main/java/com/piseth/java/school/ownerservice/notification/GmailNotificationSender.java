@@ -1,6 +1,5 @@
 package com.piseth.java.school.ownerservice.notification;
 
-import org.springframework.context.annotation.Primary;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Component;
@@ -12,7 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-@Primary
+//@Primary
 @Component
 @RequiredArgsConstructor
 @Slf4j

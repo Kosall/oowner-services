@@ -1,0 +1,25 @@
+databaseChangeLog:
+  - changeSet:
+      id: 004-add-verification-status
+      author: piseth
+      changes:
+        - addColumn:
+            tableName: owner_verifications
+            columns:
+              - column:
+                  name: status
+                  type: varchar(20)
+                  defaultValue: ACTIVE
+                  constraints:
+                    nullable: false
+
+        - createIndex:
+            tableName: owner_verifications
+            indexName: idx_owner_verifications_owner_type_status
+            columns:
+              - column:
+                  name: owner_id
+              - column:
+                  name: type
+              - column:
+                  name: status

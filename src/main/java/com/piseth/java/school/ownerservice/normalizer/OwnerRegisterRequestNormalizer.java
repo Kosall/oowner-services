@@ -37,4 +37,11 @@ public class OwnerRegisterRequestNormalizer {
     }
     
     //@TODO don't mutate parameter (create new object)
+    public String normalizeEmail(String email) {
+        return emailNormalizer.normalize(email);
+    }
+
+    public String normalizePhone(String phone) {
+        return phoneNormalizer.normalize(phone);
+    }
 }

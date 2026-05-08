@@ -6,6 +6,7 @@ import java.util.UUID;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.relational.core.mapping.Table;
 
+import com.piseth.java.school.ownerservice.enumeration.VerificationStatus;
 import com.piseth.java.school.ownerservice.enumeration.VerificationType;
 
 import lombok.AllArgsConstructor;
@@ -42,6 +43,8 @@ public class Verification {
     private Integer maxAttempts;
 
     private boolean verified;
+    
+    private VerificationStatus status;
 
     private Instant verifiedAt;
 
